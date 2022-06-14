@@ -1,32 +1,41 @@
 const db = require("../db");
 
+const colms = ["title", "count", "distance"];
+const terms = ["=", "LIKE", ">", "<"];
+
 class DeliveryController {
-  async createDelivery(req, res) {}
   async getDeliveries(req, res) {
     const { page, size, colm, term, data } = req.query;
+
     if (colm && term && data) {
-      try {
-        if (term === "LIKE") {
-          const rowCount = await db.query(
-            `SELECT COUNT(*) FROM delivery WHERE ${colm} ${term} '%${data}%'`
-          );
-          const { rows } = await db.query(
-            `SELECT * FROM delivery WHERE ${colm} ${term} '%${data}%' LIMIT ${size} OFFSET ((${page} - 1) * ${size})`
-          );
-          const counts = rowCount.rows[0];
-          res.status(200).json({ counts, rows });
+      if (
+        colms.includes(colm) &&
+        terms.includes(term) &&
+        (typeof data === "string" || typeof data === "number")
+      ) {
+        if (
+          (colm === "title" && term !== "LIKE") ||
+          ((colm === "count" || colm === "distance") && term === "LIKE") ||
+          ((colm === "count" || colm === "distance") && isNaN(Number(data)))
+        ) {
+          res.status(400).json("Не корректные параметри");
         } else {
-          const rowCounts = await db.query(
-            `SELECT COUNT(*) FROM delivery WHERE ${colm} ${term} ${data}`
-          );
-          const { rows } = await db.query(
-            `SELECT * FROM delivery WHERE ${colm} ${term} ${data} LIMIT ${size} OFFSET ((${page} - 1) * ${size})`
-          );
-          const counts = rowCounts.rows[0];
-          res.status(200).json({ counts, rows });
+          const value = term === "LIKE" ? `'%${data}%'` : data;
+          try {
+            const rowCounts = await db.query(
+              `SELECT COUNT(*) FROM delivery WHERE ${colm} ${term} ${value}`
+            );
+            const { rows } = await db.query(
+              `SELECT * FROM delivery WHERE ${colm} ${term} ${value} LIMIT ${size} OFFSET ((${page} - 1) * ${size})`
+            );
+            const counts = rowCounts.rows[0];
+            res.status(200).json({ counts, rows });
+          } catch (error) {
+            res.status(500).json(error);
+          }
         }
-      } catch (error) {
-        res.status(500).json(error);
+      } else {
+        res.status(400).json("Не корректные параметри");
       }
     } else {
       try {
@@ -41,10 +50,6 @@ class DeliveryController {
       }
     }
   }
-  async getOneDelivery(req, res) {}
-  async updateDelivery(req, res) {}
-  async deleteDelivery(req, res) {}
 }
 
 module.exports = new DeliveryController();
-// LIMIT $2 OFFSET (($1 - 1) * $2)

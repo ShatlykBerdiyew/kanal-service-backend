@@ -1,1 +1,3 @@
 # Getting Started
+
+npm install

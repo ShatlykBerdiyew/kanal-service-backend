@@ -6,8 +6,8 @@ const terms = ["=", "LIKE", ">", "<"];
 class DeliveryController {
   async getDeliveries(req, res) {
     const { page, size, colm, term, data } = req.query;
-
-    if (colm && term && data) {
+    // Провека на валидност
+    if (colm && term && data && page > 0 && size > 0) {
       if (
         colms.includes(colm) &&
         terms.includes(term) &&
@@ -39,14 +39,18 @@ class DeliveryController {
       }
     } else {
       try {
-        const rowCount = await db.query(`SELECT COUNT(*) FROM delivery`);
-        const { rows } = await db.query(
-          `SELECT * FROM delivery LIMIT ${size} OFFSET ((${page} - 1) * ${size})`
-        );
-        const counts = rowCount.rows[0];
-        res.status(200).json({ counts, rows });
+        if (page > 0 && size > 0) {
+          const rowCount = await db.query(`SELECT COUNT(*) FROM delivery`);
+          const { rows } = await db.query(
+            `SELECT * FROM delivery LIMIT ${size} OFFSET ((${page} - 1) * ${size})`
+          );
+          const counts = rowCount.rows[0];
+          res.status(200).json({ counts, rows });
+        } else {
+          res.status(400).json("Не корректные параметри");
+        }
       } catch (error) {
-        res.status(200).json(error);
+        res.status(500).json(error);
       }
     }
   }
